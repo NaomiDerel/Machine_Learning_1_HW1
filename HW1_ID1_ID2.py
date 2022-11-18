@@ -20,33 +20,54 @@ class KnnClassifier:
 
         self.ids = (213635899, 325324994)
 
+        # additional parameters:
         self.max_label = None
         self.train_points = np.ndarray((1, 1))
         self.train_labels = np.ndarray((1, 1))
         self.reversed_labels_list = np.ndarray((1, 1))
 
     def minkowski_distance(self, a, b):
+        """
+        This method calculates distance by Minkowski's formula.
+
+        :param a: first point.
+        :param b: second point.
+        :return: minkowski distance between point a and b.
+        """
         return sum(abs(a - b) ** self.p) ** (1 / self.p)
 
+    def help_f(self, point):
+        """
+        This method is called from predict on every point in the test set.
+        It calculates a list of neighbors sorted by the distances and their labels,
+        and predicts the label of the point by using the find_label method.
 
-    def help_f(self , point):
+        :param point: a single point in the test-set.
+        :return: predicted label for the point.
+        """
         distances = np.array([self.minkowski_distance(point, train_point) for train_point in self.train_points])
         s = np.array(list(zip(distances, self.train_labels)))
+
+        # sort first by distance (shortest to longest) and then by label (lexicographic order).
         ordered_neighbors = sorted(s, key=lambda x: (x[0], x[1]))
         return self.find_label(ordered_neighbors)
 
-
     def find_label(self, ordered_neighbors: np.ndarray):
+        """
+        This method predicts the label of a point from the test set.
+
+        :param ordered_neighbors: sorted list of the point's neighbors.
+        :return: predicted label of a point.
+        """
         k_neighbors = ordered_neighbors[0:self.k]
         k_labels = [neighbor[1] for neighbor in k_neighbors]
         count_of_labels = np.bincount(k_labels, minlength=self.max_label + 1)
         s = np.array(list(zip(self.reversed_labels_list, count_of_labels)))
 
+        # sort the labels first by count of labels in the k-nearest-neighbors (highest to lowest),
+        # then by label (lexicographic order).
         ordered_reversed_labels_count = sorted(s, key=lambda x: (x[1], x[0]), reverse=True)
         return self.max_label - ordered_reversed_labels_count[0][0]
-
-
-
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
@@ -64,8 +85,6 @@ class KnnClassifier:
 
         self.reversed_labels_list = np.flip(np.array(range(0, self.max_label + 1)))
 
-
-
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         This method predicts the y labels of a given dataset X, based on a previous training of the model.
@@ -78,8 +97,6 @@ class KnnClassifier:
 
         predicted_labels = [self.help_f(point) for point in X]
         return np.array(predicted_labels)
-
-
 
 
 def main():
@@ -96,8 +113,6 @@ def main():
     print(f"csv = {args.csv}, k = {args.k}, p = {args.p}")
 
     print("Initiating KnnClassifier")
-    # k = 1
-    # p = 2
     model = KnnClassifier(k=args.k, p=args.p)
     print(f"Student IDs: {model.ids}")
     print(f"Loading data from {args.csv}...")
@@ -105,9 +120,6 @@ def main():
     print(f"Loaded {data.shape[0]} rows and {data.shape[1]} columns")
     X = data[data.columns[:-1]].values.astype(np.float32)
     y = pd.factorize(data[data.columns[-1]])[0].astype(np.uint8)
-
-    # X = np.array([[0, 0], [1, 2], [3, 4], [5, 0]])
-    # y = np.array([0, 0, 1, 1])
 
     print("Fitting...")
     model.fit(X, y)

@@ -28,13 +28,25 @@ class KnnClassifier:
     def minkowski_distance(self, a, b):
         return sum(abs(a - b) ** self.p) ** (1 / self.p)
 
+
+    def help_f(self , point):
+        distances = np.array([self.minkowski_distance(point, train_point) for train_point in self.train_points])
+        s = np.array(list(zip(distances, self.train_labels)))
+        ordered_neighbors = sorted(s, key=lambda x: (x[0], x[1]))
+        return self.find_label(ordered_neighbors)
+
+
     def find_label(self, ordered_neighbors: np.ndarray):
         k_neighbors = ordered_neighbors[0:self.k]
-        count_of_labels = np.bincount(self.train_labels[k_neighbors], minlength=self.max_label + 1)
-        s = np.array(list(zip(self.reversed_labels_list, count_of_labels)), dtype=[('labels', 'uint8'), ('count', 'i4')])
+        k_labels = [neighbor[1] for neighbor in k_neighbors]
+        count_of_labels = np.bincount(k_labels, minlength=self.max_label + 1)
+        s = np.array(list(zip(self.reversed_labels_list, count_of_labels)))
 
-        ordered_reversed_labels_count = np.argsort(s, order=['labels', 'count'])
-        return self.max_label - ordered_reversed_labels_count[0]
+        ordered_reversed_labels_count = sorted(s, key=lambda x: (x[1], x[0]), reverse=True)
+        return self.max_label - ordered_reversed_labels_count[0][0]
+
+
+
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
@@ -52,6 +64,8 @@ class KnnClassifier:
 
         self.reversed_labels_list = np.flip(np.array(range(0, self.max_label + 1)))
 
+
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """
         This method predicts the y labels of a given dataset X, based on a previous training of the model.
@@ -62,20 +76,10 @@ class KnnClassifier:
         :return: A 1-dimensional numpy array of m rows. Should be of datatype np.uint8.
         """
 
-        predicted_labels = []
-
-        for (point,label) in zip(X,self.train_labels):
-            if(label == 1):
-                print ("hello")
-            distances = np.array([self.minkowski_distance(point, train_point) for train_point in self.train_points])
-            s = np.array(list(zip(distances, self.train_labels)), dtype=[('distances', 'float32'), ('labels', 'uint8')])
-            ordered_neighbors = np.argsort(s, order=['distances', 'labels'])
-            predicted_labels.append(self.find_label(ordered_neighbors))
-
+        predicted_labels = [self.help_f(point) for point in X]
         return np.array(predicted_labels)
 
-        ### Example code - don't use this:
-        # return np.random.randint(low=0, high=2, size=len(X), dtype=np.uint8)
+
 
 
 def main():
